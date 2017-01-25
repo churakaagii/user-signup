@@ -35,7 +35,7 @@ class MainHandler(Handler):
         # format is: (field name, label text, field type, error message, default text)
         
         for element in inputelem:
-            totalpage += self.build_input(element[0], element[1], element[2], element[3], element[4]) #if extending inputelem, also extend this
+            totalpage += self.build_input(*element)
             
         totalpage += footer
 
