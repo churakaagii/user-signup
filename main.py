@@ -28,7 +28,7 @@ class MainHandler(Handler):
         inputelem = (
             ("username", "Username", "text", kwargs.get("username_err", ""), kwargs.get("username_init", "")), 
             ("password", "Password", "password", kwargs.get("password_err", ""), ""), 
-            ("verify", "Re-enter Password", "password", kwargs.get("v_err", ""), ""),
+            ("verify", "Re-enter Password", "password", kwargs.get("verify_err", ""), ""),
             ("email", "Email (optional)", "text", kwargs.get("email_err", ""), kwargs.get("email_init",""))
         ) # a set of variables to initialize form fields, must be extended
         # format is: (field name, label text, field type, error message variable, default text)
@@ -58,38 +58,37 @@ class MainHandler(Handler):
         self.write(self.build_form())
         
     def post(self):
-        checklist = {} # will be populated with validation results on user input
         passed_dict = self.request.POST 
-        prep_validation = list(filter((lambda x: not(x == "verify" or x == "email")), passed_dict.iterkeys())) # list of all input to be validated
+        prep_validation = list(filter(lambda x: x != "verify", passed_dict.iterkeys())) 
+        # creates filter for all input to be validated
+                
+        checklist = { ("valid " + key): self.check_valid(passed_dict[key], REGEX_DICT[key]) for key in prep_validation } # dict of validity results
         
-        if passed_dict["email"] == "": 
-            checklist["valid email"] = True
-        else:
-            prep_validation.append("email")
-            
         if passed_dict["verify"] == passed_dict["password"]: 
             checklist["matching password"] = True
         else:
             checklist["matching password"] = False
-        
-        for key in prep_validation: # constructs checklist (validation results)
-            checklist["valid %s"%key] = self.check_valid(passed_dict[key], REGEX_DICT[key])
               
+        if passed_dict["email"] == "": # ensures no email given passes
+            checklist["valid email"] = True
+
         if all(checklist.itervalues()): # confirms validation and redirects or shows errors
             self.redirect("/welcome?username="+passed_dict["username"])
         else: 
-            errordict = {} # will be populated with errors to show user
+            init_prep = list(filter(lambda x: not(x == "password" or x == "verify"), passed_dict.iterkeys())) # creates filter for kept values
+            error_dict = { (key + "_init"): passed_dict[key] for key in init_prep }
+            # initializes error_dict with kept values
             
-            for key in checklist.iterkeys(): # constructs errordict (user errors)
+            for key in checklist.iterkeys(): # populates error_dict with user errors
                 if not checklist[key]: 
                     if key == "matching password": 
-                        key_name = "v_err"
+                        key_name = "verify_err"
                     else: 
                         var_name = key.partition("valid ")
                         key_name = var_name[2] + "_err" 
-                    errordict[key_name] = "Please enter a %s" % key
+                    error_dict[key_name] = "Please enter a %s" % key
             
-            self.write(self.build_form(**errordict))
+            self.write(self.build_form(**error_dict))
 
 class WelcomeHandler(Handler):
     def build_welcome(self, username):
