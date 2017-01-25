@@ -29,7 +29,7 @@ class MainHandler(Handler):
         footer = """
                 <input type='submit'>
             </form>
-            <p style="font-size: .8em;">coded by ada nakama</p>
+            <p style="font-size: .8em;">coded by ada n.</p>
         """
 
         totalpage = header
@@ -78,7 +78,12 @@ class MainHandler(Handler):
         self.write(self.build_form())
         
     def post(self):
-        passed_dict = self.request.POST 
+        passed_dict = self.request.POST
+        checkagainstform = [ l[0] for l in inputelem ]
+        for key in passed_dict.iterkeys(): # checks to make sure malicious code not passed in header
+            if key not in checkagainstform:
+                raise NameError("Some input was sent that is not in the form. Please enter all information correctly.")
+        
         prep_validation = list(filter(lambda x: x != "verify", passed_dict.iterkeys())) 
         # creates filter for all input to be validated
                 
@@ -122,7 +127,7 @@ class WelcomeHandler(Handler):
         if username.lower() == "ada": # v important
             username = "international space princess Ada, who must be obeyed in all things"
             
-        self.write(self.build_welcome(username))
+        self.write(self.build_welcome(escape(username)))
     
 
 app = webapp2.WSGIApplication([
