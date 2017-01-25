@@ -58,46 +58,41 @@ class MainHandler(Handler):
         self.write(self.build_form())
         
     def post(self):
-        checklist = {} # will be filled with validated user input
-        checklist_init = [] # will be passed into checklist constructor
-        passed_dict = self.request.POST # user input
+        checklist = {} # will be populated with validation results on user input
+        passed_dict = self.request.POST 
         prep_validation = list(filter((lambda x: not(x == "verify" or x == "email")), passed_dict.iterkeys())) # list of all input to be validated
         
-        for key in prep_validation: # populated list for checklist constructor
-            checklist_init.append((key, passed_dict[key], REGEX_DICT[key]))
-        
-        if passed_dict["email"]: # checks if email exists
-            checklist_init.append(("email", passed_dict["email"], REGEX_DICT["email"]))
-        else:
+        if passed_dict["email"] == "": 
             checklist["valid email"] = True
-        
-        for checkset in checklist_init: # constructs checklist
-            checklist["valid %s"%checkset[0]] = self.check_valid(checkset[1], checkset[2])
-        
-        if passed_dict["verify"] == passed_dict["password"]: # checks if pws match
+        else:
+            prep_validation.append("email")
+            
+        if passed_dict["verify"] == passed_dict["password"]: 
             checklist["matching password"] = True
         else:
             checklist["matching password"] = False
         
-        if all(checklist.itervalues()):
-            self.redirect("/welcome?username="+passed_dict["username"]) # redirect on success
-        else: # otherwise generate error messages and build a new form 
-            errordict = {} # will be populated with errors to show to user
+        for key in prep_validation: # constructs checklist (validation results)
+            checklist["valid %s"%key] = self.check_valid(passed_dict[key], REGEX_DICT[key])
+              
+        if all(checklist.itervalues()): # confirms validation and redirects or shows errors
+            self.redirect("/welcome?username="+passed_dict["username"])
+        else: 
+            errordict = {} # will be populated with errors to show user
             
-            for key in checklist.iterkeys(): # constructs errordict
-                if not checklist[key]: # if input not valid, adds error
-                    if key == "matching password": # unique check for matching pw
+            for key in checklist.iterkeys(): # constructs errordict (user errors)
+                if not checklist[key]: 
+                    if key == "matching password": 
                         key_name = "v_err"
-                    else:
+                    else: 
                         var_name = key.partition("valid ")
-                        key_name = var_name[2] + "_err"
-                        
+                        key_name = var_name[2] + "_err" 
                     errordict[key_name] = "Please enter a %s" % key
             
-            self.write(self.build_form(**errordict)) # builds error page
+            self.write(self.build_form(**errordict))
 
 class WelcomeHandler(Handler):
-    def build_welcome(self, username): # builds welcome page
+    def build_welcome(self, username):
         welc_html = """
             <h1>Welcome %s</h1>
         """
