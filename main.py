@@ -71,6 +71,8 @@ class MainHandler(Handler):
     def check_valid(self, string, regex): # general regex check
         if regex is not None:
             return regex.match(string)
+        else:
+            return True
     
     def get(self):
         self.write(self.build_form())
