@@ -33,18 +33,18 @@ class MainHandler(Handler):
         """
 
         totalpage = header
-        input_dict = []
+        input_dicts = []
         
-        for e in inputelem: # builds dict for passing kwargs to internal form builder
+        for e in inputelem: # builds dict for passing arguments to internal form builder
             e.append(kwargs.get("%s_err"%e[0], ""))
             e.append(kwargs.get("%s_init"%e[0], ""))
             thisdict = dict(zip(["internal", "external", "thistype", "thiserror", "thisinit"], e))
-            input_dict.append(thisdict)
+            input_dicts.append(thisdict)
             e.pop()
             e.pop()
             
         
-        for d in input_dict:
+        for d in input_dicts:
             totalpage += self.build_input(**d)
         
         totalpage += footer
@@ -79,39 +79,39 @@ class MainHandler(Handler):
         
     def post(self):
         passed_dict = self.request.POST
+        passed_dict_keys = list(passed_dict.iterkeys())
         checkagainstform = [ l[0] for l in inputelem ]
-        for key in passed_dict.iterkeys(): # checks to make sure malicious code not passed in header
+        
+        for key in passed_dict_keys: # checks to make sure malicious code not passed in header
             if key not in checkagainstform:
                 raise NameError("Some input was sent that is not in the form. Please enter all information correctly.")
         
-        prep_validation = list(filter(lambda x: x != "verify", passed_dict.iterkeys())) 
+        validation_filter = list(filter(lambda x: x != "verify", passed_dict_keys)) 
         # creates filter for all input to be validated
                 
-        checklist = { ("valid " + key): self.check_valid(passed_dict.get(key), REGEX_DICT.get(key)) for key in prep_validation } # dict of validity results
+        validity = { key: self.check_valid(passed_dict.get(key), REGEX_DICT.get(key)) for key in validation_filter } # dict of validity results
         
         if passed_dict["verify"] == passed_dict["password"]: 
-            checklist["matching password"] = True
+            validity["verify"] = True
         else:
-            checklist["matching password"] = False
+            validity["verify"] = False
               
         if passed_dict["email"] == "": # ensures validity if no email given
-            checklist["valid email"] = True
+            validity["email"] = True
 
-        if all(checklist.itervalues()): # confirms validation and redirects or shows errors
+        if all(validity.itervalues()): # confirms validation and redirects or shows errors
             self.redirect("/welcome?username="+passed_dict.get("username"))
-        else: 
-            init_prep = list(filter(lambda x: not(x == "password" or x == "verify"), passed_dict.iterkeys())) # creates filter for kept values
-            error_dict = { (key + "_init"): passed_dict.get(key) for key in init_prep }
-            # initializes error_dict with kept values
+        else:
+            error_filter = [ key for key in validity.iterkeys() if validity[key] == None ]
+            init_filter = list(filter(lambda x: not(x == "password" or x == "verify"), passed_dict_keys))
+            # creates filters for use in populating error_dict
             
-            for key in checklist.iterkeys(): # populates error_dict with user errors
-                if not checklist.get(key): 
-                    if key == "matching password": 
-                        key_name = "verify_err"
-                    else: 
-                        var_name = key.partition("valid ")
-                        key_name = var_name[2] + "_err" 
-                    error_dict[key_name] = "Please enter a %s" % key
+            error_dict = { (key + "_err"): "Please enter a valid %s"%key for key in error_filter }
+            init_dict = { (key + "_init"): passed_dict.get(key) for key in init_filter }
+            error_dict.update(init_dict)
+            if validity["verify"] == False:
+                error_dict["verify_err"] = "Passwords must match"
+            # populates error_dict with all values to be passed to the build function
             
             self.write(self.build_form(**error_dict))
 
