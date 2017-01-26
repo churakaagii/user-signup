@@ -89,14 +89,13 @@ class MainHandler(Handler):
         validation_filter = list(filter(lambda x: x != "verify", passed_dict_keys)) 
         # creates filter for all input to be validated
                 
-        validity = { key: self.check_valid(passed_dict.get(key), REGEX_DICT.get(key)) for key in validation_filter } # dict of validity results
+        validity = { key: self.check_valid(passed_dict.get(key), REGEX_DICT.get(key)) for key in validation_filter } 
+        # dict of validity results
         
-        if passed_dict["verify"] == passed_dict["password"]: 
-            validity["verify"] = True
-        else:
+        if passed_dict.get("verify") != passed_dict.get("password"): 
             validity["verify"] = False
               
-        if passed_dict["email"] == "": # ensures validity if no email given
+        if passed_dict.get("email") == "": # ensures validity if no email given
             validity["email"] = True
 
         if all(validity.itervalues()): # confirms validation and redirects or shows errors
@@ -109,7 +108,7 @@ class MainHandler(Handler):
             error_dict = { (key + "_err"): "Please enter a valid %s"%key for key in error_filter }
             init_dict = { (key + "_init"): passed_dict.get(key) for key in init_filter }
             error_dict.update(init_dict)
-            if validity["verify"] == False:
+            if validity.get("verify") == False:
                 error_dict["verify_err"] = "Passwords must match"
             # populates error_dict with all values to be passed to the build function
             
